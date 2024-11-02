@@ -10,7 +10,7 @@ warnings.filterwarnings('ignore', category=UserWarning)
 app = Flask(__name__)
 
 # Load the model
-model_path = 'C:/Users/User/Desktop/mmm/Sound.pkl'  # Adjust the model path accordingly
+model_path = './model/Sound.pkl'  # Adjust the model path accordingly
 model = joblib.load(model_path)
 
 # Define the feature extraction function
