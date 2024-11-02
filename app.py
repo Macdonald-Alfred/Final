@@ -66,6 +66,3 @@ def index():
         return render_template('ui.html', request="POST", result=result)
     else:
         return render_template("ui.html")
-
-if __name__ == "__main__":
-    app.run(debug=True, threaded=True)
