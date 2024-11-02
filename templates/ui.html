@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Prediction Model</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        /* Basic Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        /* Body and Layout Styling */
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Sidebar Styling */
+        .sidebar {
+            width: 250px;
+            background-color: #2f855a;
+            color: white;
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100%;
+            padding-top: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .sidebar h2 {
+            margin-bottom: 2rem;
+            font-size: 1.5rem;
+        }
+
+        .sidebar a {
+            color: white;
+            text-decoration: none;
+            font-size: 1.2rem;
+            padding: 1rem 2rem;
+            text-align: center;
+            width: 100%;
+            transition: background 0.3s ease;
+            cursor: pointer;
+        }
+
+        .sidebar a:hover {
+            background-color: #48bb78;
+        }
+
+        /* Content Area Styling */
+        .content {
+            margin-left: 250px;
+            padding: 2rem;
+            width: 100%;
+        }
+
+        h1, h3 {
+            color: #333;
+            text-align: center;
+        }
+
+        /* Sections Styling */
+        section {
+            display: none; /* Hide all sections initially */
+            min-height: 400px; /* Ensure minimum height for visibility */
+        }
+
+        section.active {
+            display: block; /* Show only the active section */
+        }
+
+        .section-title {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: #333;
+        }
+
+        /* Form and File Upload Styling */
+        .form-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 2rem;
+            background-color: rgba(255, 255, 255, 0.8); /* Semi-transparent background for form */
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        input[type="file"] {
+            padding: 10px;
+            font-size: large;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            width: 100%;
+            margin-top: 1rem;
+        }
+
+        button {
+            padding: 0.8rem 1.5rem;
+            font-size: 1rem;
+            color: white;
+            background-color: #2f855a;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 1rem;
+        }
+
+        button:hover {
+            background-color: #48bb78;
+        }
+
+        /* Audio Player Styling */
+        .audio-controls {
+            display: flex;
+            align-items: center;
+            margin-top: 1rem;
+        }
+
+        .audio-progress {
+            width: 100%;
+            margin: 0 10px;
+        }
+
+        /* Result Styling */
+        .result, .error-message {
+            margin-top: 1rem;
+            color: #333;
+            text-align: center;
+        }
+
+        /* Background Image for Predict Section */
+        #predict {
+            background-image: url('image/h4.jpg');
+            background-size: cover; /* Cover the entire section */
+            background-position: center; /* Center the image */
+            padding: 2rem; /* Padding for internal spacing */
+            border-radius: 10px; /* Optional: for rounded corners */
+            color: white; /* Change text color for better contrast */
+            min-height: 600px; /* Increased minimum height to ensure visibility */
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar Menu -->
+    <div class="sidebar">
+        <h2>Menu</h2>
+        <a onclick="showSection('home')">Home</a>
+        <a onclick="showSection('predict')">Predict</a>
+        <a onclick="showSection('about')">About</a>
+    </div>
+
+    <!-- Content Area -->
+    <div class="content">
+        <!-- Predict Section with Background Image -->
+        <section id="predict" class="section active">
+            <h1 class="section-title">Predict</h1>
+            <div class="form-container">
+                <form id="uploadForm" method="POST" enctype="multipart/form-data" action="?section=predict">
+                    <label for="file">Upload Audio File:</label>
+                    <input type="file" id="fileInput" name="file" accept="audio/*" required onchange="loadAudio(event)">
+                    <button type="submit"><i class="fas fa-upload"></i> Upload</button>
+                    <button type="button" onclick="resetForm()">Reset</button>
+                </form>
+
+                <div class="audio-controls" id="audioControls" style="display: none;">
+                    <button onclick="togglePlayPause()">Play</button>
+                    <input type="range" id="audioProgress" class="audio-progress" value="0" max="100" step="1" onchange="seekAudio()">
+                    <span id="audioTime">0:00</span>
+                </div>
+
+                <audio id="audioPlayer" ontimeupdate="updateProgress()" style="display: none;"></audio>
+
+                <div id="predictionResult" class="result">
+                    {% if result is not none %}
+                        <h3>Prediction Result: {{ result }}</h3>
+                    {% endif %}
+                </div>
+                {% if error %}
+                    <div class="error-message">{{ error }}</div>
+                {% endif %}
+            </div>
+        </section>
+
+        <!-- About Section -->
+        <section id="about" class="section">
+            <h1 class="section-title">About</h1>
+            <p>This application utilizes a machine learning model to predict various audio events. Built using Python, Flask, and audio processing libraries, it demonstrates the integration of AI with sound analysis.</p>
+        </section>
+    </div>
+
+    <!-- JavaScript for Navigation and Audio Control -->
+    <script>
+        // Sidebar Navigation
+        function showSection(sectionId) {
+            document.querySelectorAll('section').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.getElementById(sectionId).classList.add('active');
+            history.pushState(null, null, '?section=' + sectionId);
+        }
+
+        function displaySectionFromURL() {
+            const params = new URLSearchParams(window.location.search);
+            const section = params.get('section') || 'home';
+            showSection(section);
+        }
+
+        document.addEventListener("DOMContentLoaded", displaySectionFromURL);
+
+        // Reset Form Functionality
+        function resetForm() {
+            document.getElementById("uploadForm").reset();
+            document.getElementById("audioPlayer").src = "";
+            document.getElementById("audioControls").style.display = "none";
+            document.getElementById("predictionResult").innerHTML = ""; // Clear prediction result
+        }
+
+        // Load Audio Functionality
+        function loadAudio(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const audioPlayer = document.getElementById("audioPlayer");
+                audioPlayer.src = URL.createObjectURL(file);
+                audioPlayer.style.display = "block";
+                document.getElementById("audioControls").style.display = "flex";
+            }
+        }
+
+        // Audio Play/Pause Toggle
+        function togglePlayPause() {
+            const audioPlayer = document.getElementById("audioPlayer");
+            if (audioPlayer.paused) {
+                audioPlayer.play();
+                document.querySelector(".audio-controls button").textContent = "Pause";
+            } else {
+                audioPlayer.pause();
+                document.querySelector(".audio-controls button").textContent = "Play";
+            }
+        }
+
+        // Update Progress Bar
+        function updateProgress() {
+            const audioPlayer = document.getElementById("audioPlayer");
+            const progress = document.getElementById("audioProgress");
+            const audioTime = document.getElementById("audioTime");
+            if (audioPlayer.duration) {
+                progress.value = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+                audioTime.textContent = formatTime(audioPlayer.currentTime);
+            }
+        }
+
+        // Seek Audio Functionality
+        function seekAudio() {
+            const audioPlayer = document.getElementById("audioPlayer");
+            const progress = document.getElementById("audioProgress");
+            audioPlayer.currentTime = (progress.value / 100) * audioPlayer.duration;
+        }
+
+        // Format Time for Display
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
+        }
+    </script>
+</body>
+</html>

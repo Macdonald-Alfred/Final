@@ -1,0 +1,38 @@
+#toolbar {
+  display: flex;
+ 
+  align-items: center;
+  
+  justify-content: center;
+
+  position: fixed;
+
+  width: 100%;
+ 
+  top: 0px;
+  
+  height: 70px;
+
+  z-index: 1;
+
+}
+
+#toolbar::before {
+
+  content: "";
+ 
+ background-color: black;
+
+  position: absolute;
+
+  height: 100%;
+ 
+ width: 100%;
+ 
+ top: 0px;
+ 
+ left: 0px;
+ 
+ z-index: -1;
+ 
+ opacity: 1;
